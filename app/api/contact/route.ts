@@ -11,15 +11,19 @@ const Schema = z.object({
   empresa: z.string().trim().optional().nullable(),
   email: z.string().trim().email("Correo inválido"),
   telefono: z.string().trim().optional().nullable(),
-  detalle: z
-    .string()
-    .trim()
-    .min(5, "Cuéntanos un poco más sobre tu necesidad (mín. 5 caracteres)"),
+  detalle: z.string().trim().min(5, "Cuéntanos un poco más sobre tu necesidad (mín. 5 caracteres)"),
   website: z.string().optional().nullable(),        // honeypot
   recaptchaToken: z.string().optional().nullable(), // opcional
 });
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ---------- Resend (instancia perezosa) ----------
+let _resend: Resend | null = null;
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY no configurada");
+  if (!_resend) _resend = new Resend(key);
+  return _resend;
+}
 
 // ---------- Google Sheets helpers ----------
 function getJwtClient() {
@@ -44,7 +48,6 @@ async function ensureHeaders() {
   const auth = getJwtClient();
   const sheets = google.sheets({ version: "v4", auth });
 
-  // Lee A1:H1. Si está vacío (sin headers), los crea.
   const read = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetsId,
     range: "Leads!A1:H1",
@@ -57,17 +60,7 @@ async function ensureHeaders() {
 
   if (hasHeaders) return;
 
-  // Crea encabezados
-  const headers = [
-    "timestamp",
-    "nombre",
-    "empresa",
-    "email",
-    "telefono",
-    "detalle",
-    "fuente",
-    "userAgent",
-  ];
+  const headers = ["timestamp","nombre","empresa","email","telefono","detalle","fuente","userAgent"];
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: sheetsId,
@@ -83,7 +76,6 @@ async function appendLeadToSheet(values: any[]) {
   const auth = getJwtClient();
   const sheets = google.sheets({ version: "v4", auth });
 
-  // Asegura encabezados antes de insertar
   await ensureHeaders();
 
   return sheets.spreadsheets.values.append({
@@ -96,26 +88,26 @@ async function appendLeadToSheet(values: any[]) {
 
 // ---------- reCAPTCHA opcional ----------
 async function verifyRecaptcha(token?: string | null) {
-    const secret = process.env.RECAPTCHA_SECRET;
-    const minScore = Number(process.env.RECAPTCHA_MIN_SCORE ?? "0.5");
-    if (!secret) return { ok: true, score: null, reason: "no-secret" };
-    if (!token)  return { ok: false, score: null, reason: "no-token" };
-  
-    try {
-      const body = new URLSearchParams({ secret, response: token });
-      const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-      });
-      const json = await res.json();
-      const score = typeof json.score === "number" ? json.score : null;
-      const ok = Boolean(json.success) && (score === null || score >= minScore);
-      return { ok, score, reason: ok ? "ok" : "low-score" };
-    } catch (e) {
-      return { ok: false, score: null, reason: "error" };
-    }
+  const secret = process.env.RECAPTCHA_SECRET;
+  const minScore = Number(process.env.RECAPTCHA_MIN_SCORE ?? "0.5");
+  if (!secret) return { ok: true, score: null, reason: "no-secret" };
+  if (!token)  return { ok: false, score: null, reason: "no-token" };
+
+  try {
+    const body = new URLSearchParams({ secret, response: token });
+    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    const json = await res.json();
+    const score = typeof json.score === "number" ? json.score : null;
+    const ok = Boolean(json.success) && (score === null || score >= minScore);
+    return { ok, score, reason: ok ? "ok" : "low-score" };
+  } catch {
+    return { ok: false, score: null, reason: "error" };
   }
+}
 
 export async function POST(req: Request) {
   try {
@@ -127,29 +119,21 @@ export async function POST(req: Request) {
 
     // reCAPTCHA (opcional)
     const recaptcha = await verifyRecaptcha(data.recaptchaToken ?? null);
-if (!recaptcha.ok) {
-  console.warn("reCAPTCHA failed:", recaptcha);
-  return NextResponse.json(
-    {
-      ok: false,
-      message:
-        recaptcha.reason === "low-score"
-          ? "Verificación reCAPTCHA falló (score bajo)."
-          : "Verificación reCAPTCHA falló.",
-    },
-    { status: 400 }
-  );
-}
-
-    // ---------- Email via Resend ----------
-    if (!process.env.RESEND_API_KEY) {
+    if (!recaptcha.ok) {
+      console.warn("reCAPTCHA failed:", recaptcha);
       return NextResponse.json(
-        { ok: false, message: "RESEND_API_KEY no configurada" },
-        { status: 500 }
+        {
+          ok: false,
+          message: recaptcha.reason === "low-score"
+            ? "Verificación reCAPTCHA falló (score bajo)."
+            : "Verificación reCAPTCHA falló.",
+        },
+        { status: 400 }
       );
     }
-    const FROM =
-      process.env.CONTACT_FROM?.trim() || "PrinTera <onboarding@resend.dev>";
+
+    // ---------- Email via Resend ----------
+    const FROM = process.env.CONTACT_FROM?.trim() || "PrinTera <onboarding@resend.dev>";
     const TO = process.env.CONTACT_TO?.trim();
     if (!TO) {
       return NextResponse.json(
@@ -167,6 +151,7 @@ if (!recaptcha.ok) {
       `Detalle: ${data.detalle}`,
     ].join("\n");
 
+    const resend = getResend(); // ← instancia aquí
     const mailResp = await resend.emails.send({
       from: FROM,
       to: [TO],
@@ -188,26 +173,15 @@ if (!recaptcha.ok) {
       const ua = req.headers.get("user-agent") || "";
       const now = new Date().toISOString();
       await appendLeadToSheet([
-        now,                // A: timestamp
-        data.nombre,        // B
-        data.empresa ?? "", // C
-        data.email,         // D
-        data.telefono ?? "",// E
-        data.detalle,       // F
-        "Landing",          // G: fuente
-        ua,                 // H: user agent
+        now, data.nombre, data.empresa ?? "", data.email, data.telefono ?? "",
+        data.detalle, "Landing", ua
       ]);
       saved = true;
     } catch (sheetErr: any) {
       console.error("SHEETS_ERROR", sheetErr?.message || sheetErr);
-      // No frenamos el éxito del correo si Sheets falla
     }
 
-    return NextResponse.json({
-      ok: true,
-      saved,
-      message: "¡Gracias! Hemos recibido tu solicitud.",
-    });
+    return NextResponse.json({ ok: true, saved, message: "¡Gracias! Hemos recibido tu solicitud." });
   } catch (err: any) {
     if (err?.issues) {
       return NextResponse.json(
