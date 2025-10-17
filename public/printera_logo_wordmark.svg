@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <defs>
+    <style>
+      .red { fill: #e11d48; }   /* Red 600 */
+      .blue { fill: #2563eb; }  /* Blue 600 */
+      .dark { fill: #0f172a; }  /* Slate-900 for optional accents */
+    </style>
+  </defs>
+  <!-- Minimal printer + check icon -->
+  <g transform="translate(40,60)">
+    <!-- printer body -->
+    <rect x="0" y="40" rx="16" ry="16" width="150" height="110" fill="#2563eb"/>
+    <!-- paper -->
+    <rect x="24" y="0" rx="8" ry="8" width="100" height="80" fill="#ffffff"/>
+    <!-- output slot -->
+    <rect x="40" y="120" width="70" height="10" fill="#ffffff" opacity="0.9"/>
+    <!-- check mark -->
+    <path class="red" d="M40 55 l-12 12 30 30 60-60 -12-12 -48 48z"/>
+  </g>
+
+  <!-- Wordmark: 'Prin' red + 'Tera' blue -->
+  <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+     font-weight="800" font-size="140" letter-spacing="1">
+    <text x="220" y="180" class="red">Prin</text>
+    <text x="490" y="180" class="blue">Tera</text>
+  </g>
+
+  <!-- Tagline (optional, can delete) -->
+  <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+     font-weight="500" font-size="32" fill="#334155">
+    <text x="220" y="230">impresión empresarial sin fricción</text>
+  </g>
+</svg>

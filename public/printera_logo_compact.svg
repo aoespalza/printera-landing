@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="220" viewBox="0 0 800 220">
+  <!-- icon -->
+  <g transform="translate(10,35) scale(0.9)">
+    <rect x="0" y="40" rx="14" ry="14" width="140" height="100" fill="#2563eb"/>
+    <rect x="20" y="0" rx="8" ry="8" width="96" height="72" fill="#ffffff"/>
+    <rect x="36" y="116" width="68" height="8" fill="#ffffff" opacity="0.9"/>
+    <path d="M35 53 l-11 11 27 27 54-54 -11-11 -43 43z" fill="#e11d48"/>
+  </g>
+  <!-- wordmark -->
+  <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+     font-weight="800" font-size="110" letter-spacing="1">
+    <text x="180" y="145" fill="#e11d48">Prin</text>
+    <text x="420" y="145" fill="#2563eb">Tera</text>
+  </g>
+</svg>

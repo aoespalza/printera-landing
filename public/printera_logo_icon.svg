@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 200 200">
+  <!-- Square canvas -->
+  <rect width="200" height="200" rx="32" ry="32" fill="#ffffff"/>
+  <!-- printer body -->
+  <rect x="30" y="80" rx="14" ry="14" width="140" height="90" fill="#2563eb"/>
+  <!-- paper -->
+  <rect x="50" y="40" rx="8" ry="8" width="100" height="70" fill="#ffffff"/>
+  <!-- output slot -->
+  <rect x="70" y="150" width="60" height="10" fill="#ffffff" opacity="0.9"/>
+  <!-- check mark -->
+  <path d="M75 95 l-12 12 30 30 60-60 -12-12 -48 48z" fill="#e11d48"/>
+</svg>
